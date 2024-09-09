@@ -43,7 +43,7 @@ patches:
             - --prometheus-config-reloader=artifactory.ssnc.dev/quay.io/prometheus-operator/prometheus-config-reloader:v
             - --prometheus-default-base-image=artifactory.ssnc.dev/quay.io/prometheus/prometheus
             - --namespaces=mon
-            image: artifactory.ssnc.dev/quay.io/prometheus-operator/prometheus-operator:v
+            image: quay.io/prometheus-operator/prometheus-operator:v
             name: prometheus-operator
 
 replacements:
