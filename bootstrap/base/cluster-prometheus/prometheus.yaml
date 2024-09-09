@@ -1,0 +1,165 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-k8s
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    prometheus: federated-prometheus
+  name: federated-prometheus-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  - services
+  - endpoints
+  verbs:
+  - list
+  - get
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: federated-prometheus-role
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: federated-prometheus-role
+subjects:
+- kind: ServiceAccount
+  name: prometheus-k8s
+  namespace: mon
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: federated-prometheus
+  labels:
+    prometheus: federated-prometheus
+spec:
+  evaluationInterval: 30s
+  scrapeInterval: 30s
+  nodeSelector:
+    node-role.kubernetes.io/infra: ''
+  tolerations:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/infra
+      operator: Exists
+  affinity:
+    podAntiAffinity:                                 
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - topologyKey: kubernetes.io/hostname   
+        labelSelector:
+          matchLabels:
+            prometheus: federated-prometheus
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app: prometheus-k8s
+  retention: 6h
+  replicas: 2
+  externalLabels:
+    cluster: "clustername"
+  thanos:
+    baseImage: artifactory.ssnc.dev/quay.io/thanos/thanos
+    version: v0.31.0
+    logLevel: debug
+    objectStorageConfig:
+      key: store-s3-secret.yaml
+      name: storage-config
+    volumeMounts:
+      - name: ca-bundle
+        mountPath: /opt/bd
+  resources:
+    limits:
+      cpu: 2000m
+    requests:
+      cpu: 700m
+      memory: 4000Mi
+  containers:
+    - name: config-reloader
+      resources:
+        limits:
+          cpu: 50m
+  volumeMounts:
+    - mountPath: /opt/bd
+      name: ca-bundle
+  volumes:
+    - name: ca-bundle
+      configMap:
+        name: ca-bundle
+  version: v2.46.0
+  serviceAccountName: prometheus-k8s
+  serviceMonitorSelector:
+    matchLabels:
+      app: platform-monitors
+  ruleSelector:
+    matchLabels:
+      prometheus: federated
+      role: alert-rules
+  configMaps:
+  - serving-certs-ca-bundle
+  - ca-bundle
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: prometheus-k8s-tls
+  labels:
+    prometheus: federated-prometheus
+  name: prometheus-k8s
+spec:
+  ports:
+  - name: web
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  selector:
+    app.kubernetes.io/name: prometheus
+    operator.prometheus.io/name: federated-prometheus
+  type: ClusterIP
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: serving-certs-ca-bundle
+  annotations:
+    service.beta.openshift.io/inject-cabundle: 'true'
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    haproxy.router.openshift.io/timeout: "600s"
+    openshift.io/host.generated: "true"
+  labels:
+    app: federated-prometheus
+  name: prometheus
+spec:
+  port:
+    targetPort: web
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: prometheus-k8s
+    weight: 100
+  wildcardPolicy: None
+---
+apiVersion: v1
+data:
+  session_secret: OEY3RDdEMzUtNDExNi00OEMwLTg4M0MtOTZBOUEzRDREQTlD
+kind: Secret
+metadata:
+  name: prometheus-k8s-proxy

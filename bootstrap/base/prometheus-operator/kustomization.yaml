@@ -1,0 +1,44 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# OKD/OCP cluster call this overlay to get additional patch/scrubbing made for Openshift clusters.
+
+resources:
+  - base
+
+patches:
+# Exclude Prometheus CRDs since OCP/OKD ClusterVersion Operator maintains them. We don't need the updates in them necessarilly. 
+- target:
+    kind: CustomResourceDefinition
+    labelSelector: app.kubernetes.io/part-of=infra
+  patch: |-
+    apiVersion: v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: not-used-to-match-or-patch
+    $patch: delete
+# Drop securityContext for prom Operator in all OCP/OKD clusters
+- target:
+    kind: Deployment
+    name: prometheus-operator
+  patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: prometheus-operator
+    spec:
+      template:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            seccompProfile:
+              type: RuntimeDefault
+            $patch: delete
+# Remove optional arg for Operator to maintain kube-system/kubelet Service EndPoints. Could conflict with openshift-monitoring Prom Operator instance which already does this. 
+- target:
+    kind: Deployment
+    name: prometheus-operator
+  patch: |
+    - op: remove
+      path: /spec/template/spec/containers/0/args/0

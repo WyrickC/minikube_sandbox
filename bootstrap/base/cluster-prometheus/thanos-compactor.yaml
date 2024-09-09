@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: thanos-compactor
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thanos-compactor
+  labels:
+    app: thanos-compactor
+spec:
+  replicas: 1 #This must be a singleton
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: thanos-compactor
+  template:
+    metadata:
+      labels:
+        app: thanos-compactor
+    spec:
+      serviceAccountName: thanos-compactor
+      nodeSelector:
+        node-role.kubernetes.io/infra: ''
+      tolerations:
+        - key: node-role.kubernetes.io/infra
+          operator: Exists
+          effect: NoSchedule
+      containers:
+      - name: thanos-compactor
+        image: artifactory.ssnc.dev/quay.io/thanos/thanos:v0.31.0
+        args:
+        - compact
+        - --deduplication.func=penalty
+        - --deduplication.replica-label=orig_prometheus_replica
+        - --deduplication.replica-label=prometheus_replica
+        - --deduplication.replica-label=prometheus
+        - --data-dir=/data/thanos-compact-data
+        - --objstore.config-file=/etc/prometheus/store-s3-secret.yaml
+        - --wait-interval=1m
+        - --wait
+        ports:
+        - name: http
+          containerPort: 10902
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: http
+        resources:
+          requests:
+            cpu: 100m
+            memory: 500Mi
+          limits:
+            memory: 4000Mi
+            cpu: 2
+        volumeMounts:
+        - name: ca-bundle
+          mountPath: /opt/bd
+        - name: s3-store-credentials
+          mountPath: /etc/prometheus/
+          readOnly: true
+        - name: compactor-data
+          mountPath: /data/thanos-compact-data         
+      volumes:
+      - name: compactor-data
+        persistentVolumeClaim:
+          claimName: compactor-data
+      - name: s3-store-credentials
+        secret:
+          secretName: storage-config
+      - name: ca-bundle
+        configMap:
+          name: ca-bundle
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: compactor-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: bd-vsphere
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-compactor
+  labels:
+    app: thanos-compactor  
+spec:
+  ports:
+  - port: 9091
+    protocol: TCP
+    targetPort: http
+    name: http
+  selector:
+    app: thanos-compactor
+  type: ClusterIP 

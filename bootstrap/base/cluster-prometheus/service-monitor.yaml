@@ -1,0 +1,340 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: platform-monitors
+  name: federated-openshift-monitoring-non-pod-metrics
+spec:
+  endpoints:
+  - interval: 30s
+    scrapeTimeout: 30s
+    port: web
+    metricRelabelings:
+    - action: labeldrop
+      regex: id
+    - action: labeldrop
+      regex: prometheus
+    - action: labeldrop
+      regex: prometheus_replica
+    - action: labeldrop
+      regex: pod
+    relabelings:
+      - action: replace
+        replacement: $(HOSTNAME)
+        sourceLabels:
+          - __name__
+        targetLabel: __tmp_prom_fed_name
+      - action: replace
+        regex: '.*([0-3])$'
+        replacement: $1
+        sourceLabels:
+          - __tmp_prom_fed_name
+        targetLabel: __tmp_prom_fed_index
+      - action: replace
+        regex: '.*([0-3])$'
+        replacement: $1
+        sourceLabels:
+          - __meta_kubernetes_pod_name
+        targetLabel: __tmp_prom_ocp_index
+      - action: replace
+        sourceLabels:
+          - __tmp_prom_fed_index
+          - __tmp_prom_ocp_index
+        targetLabel: __tmp_prom_indexes_combined
+      - action: drop
+        regex: (0;1|0;2|0;3|1;0|1;2|1;3|2;0|2;1|2;3|3;0|3;1|3;2)
+        sourceLabels:
+          - __tmp_prom_indexes_combined
+      - action: labeldrop
+        regex: pod
+      - action: replace
+        regex: prometheus-k8s-.*
+        replacement: ocp-prometheus
+        sourceLabels:
+          - __meta_kubernetes_pod_name
+        targetLabel: pod
+      - action: drop
+        regex: prometheus-k8s-.*
+        sourceLabels:
+          - pod
+    params:
+      'match[]': 
+        - '{__name__!~".*(up|pod|container|scrape|prometheus|ALERTS|ALERTS_FOR_STATE).*",job=~"(router-internal-default|cluster-version-operator|prometheus-k8s|node-exporter|kube-state-metrics|kubelet|windows-exporter)"}'
+    scheme: https
+    path: /federate
+    honorLabels: true
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+      serverName: prometheus-k8s.openshift-monitoring.svc.cluster.local
+  namespaceSelector:
+    matchNames:
+    - openshift-monitoring
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: "k8s"
+      app.kubernetes.io/component: "prometheus"
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: platform-monitors
+  name: federated-openshift-monitoring-pod-metrics
+spec:
+  endpoints:
+  - interval: 30s
+    scrapeTimeout: 30s
+    port: web
+    metricRelabelings:
+    - action: labeldrop
+      regex: id
+    - action: labeldrop
+      regex: prometheus
+    - action: labeldrop
+      regex: prometheus_replica
+    relabelings:
+      - action: replace
+        replacement: $(HOSTNAME)
+        sourceLabels:
+          - __name__
+        targetLabel: __tmp_prom_fed_name
+      - action: replace
+        regex: '.*([0-3])$'
+        replacement: $1
+        sourceLabels:
+          - __tmp_prom_fed_name
+        targetLabel: __tmp_prom_fed_index
+      - action: replace
+        regex: '.*([0-3])$'
+        replacement: $1
+        sourceLabels:
+          - __meta_kubernetes_pod_name
+        targetLabel: __tmp_prom_ocp_index
+      - action: replace
+        sourceLabels:
+          - __tmp_prom_fed_index
+          - __tmp_prom_ocp_index
+        targetLabel: __tmp_prom_indexes_combined
+      - action: drop
+        regex: (0;1|0;2|0;3|1;0|1;2|1;3|2;0|2;1|2;3|3;0|3;1|3;2)
+        sourceLabels:
+          - __tmp_prom_indexes_combined
+    params:
+      'match[]': 
+        - '{__name__=~".*(up|pod|container|scrape|prometheus|ALERTS|ALERTS_FOR_STATE).*",job=~"(cluster-version-operator|prometheus-k8s|node-exporter|kube-state-metrics|kubelet|windows-exporter)"}'
+    scheme: https
+    path: /federate
+    honorLabels: true
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+      serverName: prometheus-k8s.openshift-monitoring.svc.cluster.local
+  namespaceSelector:
+    matchNames:
+    - openshift-monitoring
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: "k8s"
+      app.kubernetes.io/component: "prometheus"
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: platform-monitors
+  name: bd-prometheus
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    interval: 30s
+    scrapeTimeout: 30s
+    port: web
+    scheme: http
+  jobLabel: component
+  namespaceSelector:
+    matchNames:
+    - mon
+  selector:
+    matchLabels:
+      prometheus: federated-prometheus
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: platform-monitors
+  name: bd-app-service-monitor
+spec:
+  endpoints:
+    - interval: 15s
+      path: /diagnostic/metrics
+      port: management
+      metricRelabelings:
+      - action: labeldrop
+        regex: id
+      scheme: http
+      scrapeTimeout: 10s
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      metrics.blackdiamond.com/export: scrape
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: platform-monitors
+    app.kubernetes.io/part-of: infra
+  name: bd-thanos-querier
+spec:
+  endpoints:
+    - interval: 30s
+      path: /metrics
+      port: http
+      scrapeTimeout: 30s
+  namespaceSelector:
+    matchNames:
+      - mon
+  selector:
+    matchLabels:
+      app: thanos-querier
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: platform-monitors
+    app.kubernetes.io/part-of: infra
+  name: bd-thanos-store
+spec:
+  endpoints:
+    - interval: 30s
+      path: /metrics
+      port: http
+      scrapeTimeout: 30s
+  namespaceSelector:
+    matchNames:
+      - mon
+  selector:
+    matchLabels:
+      app: thanos-store-gateway
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: platform-monitors
+    app.kubernetes.io/part-of: infra
+  name: bd-thanos-compactor
+spec:
+  endpoints:
+    - interval: 30s
+      path: /metrics
+      port: http
+      scrapeTimeout: 30s
+  namespaceSelector:
+    matchNames:
+      - mon
+  selector:
+    matchLabels:
+      app: thanos-compactor
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bd-thanos-ruler
+  namespace: mon
+  labels:
+    app: platform-monitors
+    app.kubernetes.io/part-of: infra
+spec:
+  endpoints:
+    - interval: 15s
+      path: /metrics
+      port: http
+      scrapeTimeout: 15s
+  namespaceSelector:
+    matchNames:
+      - mon
+  selector:
+    matchLabels:
+      app: main-thanos-ruler
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-cluster-metrics
+  labels:
+    app: platform-monitors
+    app.kubernetes.io/part-of: infra
+spec:
+  namespaceSelector:
+    matchNames:
+      - argocd
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-cluster-metrics
+  endpoints:
+    - port: metrics
+      interval: 30s
+      scrapeTimeout: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-cluster-server-metrics
+  labels:
+    app: platform-monitors
+    app.kubernetes.io/part-of: infra
+spec:
+  namespaceSelector:
+    matchNames:
+      - argocd
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-cluster-server-metrics
+  endpoints:
+    - port: metrics
+      interval: 30s
+      scrapeTimeout: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-notifications-controller-metrics
+  labels:
+    app: platform-monitors
+    app.kubernetes.io/part-of: infra
+spec:
+  namespaceSelector:
+    matchNames:
+      - argocd
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-notifications-controller-metrics
+  endpoints:
+    - port: metrics
+      interval: 30s
+      scrapeTimeout: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-cluster-repo-server
+  labels:
+    app: platform-monitors
+    app.kubernetes.io/part-of: infra
+spec:
+  namespaceSelector:
+    matchNames:
+      - argocd
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-cluster-repo-server
+  endpoints:
+    - port: metrics
+      interval: 30s
+      scrapeTimeout: 15s

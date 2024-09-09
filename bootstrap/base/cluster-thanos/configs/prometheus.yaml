@@ -1,0 +1,11 @@
+apiVersion: 1
+datasources:
+  - name: thanos-querier
+    type: prometheus
+    access: proxy
+    orgId: 1
+    version: 1
+    url: http://main-thanos-querier.mon.svc:9090
+    editable: false
+    withCredentials: false
+    basicAuth: false

@@ -1,0 +1,21 @@
+# Overlay instantiating this: ../cloud-base (cloud k8s overlays should call ../cloud-base)
+# This base helps to cherry pick from existing ../base/<components>
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mon
+
+resources:
+  # Namespace
+  - observability-namespace
+  # Operator
+  - prometheus-operator/base
+  # Prometheus cluster
+  - cluster-prometheus/prometheus.yaml
+  - cluster-prometheus/store-gateway.yaml
+  - cluster-prometheus/thanos-compactor.yaml
+  - cluster-prometheus/thanos-querier.yaml
+  # Thanos cluster
+  - cluster-thanos
+
+

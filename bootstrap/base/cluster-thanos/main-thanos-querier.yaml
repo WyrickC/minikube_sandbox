@@ -1,0 +1,107 @@
+apiVersion: k8s.ovn.org/v1
+kind: EgressIP
+metadata:
+  name: main-thanos
+spec:
+  egressIPs: []
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: mon
+  podSelector:
+    matchLabels:
+      app: main-thanos-querier
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: main-thanos-querier
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: main-thanos-querier
+  labels:
+    app: main-thanos-querier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: main-thanos-querier
+  template:
+    metadata:
+      labels:
+        app: main-thanos-querier
+    spec:
+      serviceAccountName: main-thanos-querier
+      nodeSelector:
+        node-role.kubernetes.io/infra: ''
+      tolerations:
+        - key: node-role.kubernetes.io/infra
+          operator: Exists
+          effect: NoSchedule
+      containers:
+      - name: thanos-query
+        image: aquay.io/thanos/thanos:v0.31.0
+        args:
+        - query
+        - '--query.replica-label=replica'
+        - '--query.replica-label=prometheus'
+        - '--query.replica-label=prometheus_replica'
+        - '--query.replica-label=orig_prometheus_replica'
+        - '--query.auto-downsampling'
+        - '--query.default-step=1m'
+        - '--query.metadata.default-time-range=600m'
+        - '--store.response-timeout=0'
+        ports:
+        - name: http
+          containerPort: 10902
+        - name: grpc
+          containerPort: 10901
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: http
+        resources:
+          limits:
+            cpu: "1"
+            memory: "4Gi"
+          requests:
+            cpu: "200m"
+            memory: "1Gi"
+      volumes:
+      - name: ca-bundle
+        configMap:
+          name: ca-bundle
+          defaultMode: 444
+      - name: secret-thanos-querier-tls
+        secret:
+          secretName: thanos-querier-tls
+      - name: secret-thanos-querier-proxy 
+        secret:
+          secretName: thanos-querier-proxy 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: thanos-querier-tls
+  labels:
+    app: main-thanos-querier
+  name: main-thanos-querier
+spec:
+  ports:
+  - port: 9091
+    protocol: TCP
+    targetPort: http
+    name: http
+  - port: 9090
+    protocol: TCP
+    targetPort: http
+    name: grafana-access
+  selector:
+    app: main-thanos-querier
+  type: ClusterIP
