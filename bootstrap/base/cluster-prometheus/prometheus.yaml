@@ -45,40 +45,12 @@ metadata:
 spec:
   evaluationInterval: 30s
   scrapeInterval: 30s
-  nodeSelector:
-    node-role.kubernetes.io/infra: ''
-  tolerations:
-    - effect: NoSchedule
-      key: node-role.kubernetes.io/infra
-      operator: Exists
-  affinity:
-    podAntiAffinity:                                 
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - topologyKey: kubernetes.io/hostname   
-        labelSelector:
-          matchLabels:
-            prometheus: federated-prometheus
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 100
-        podAffinityTerm:
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app: prometheus-k8s
   retention: 6h
   replicas: 2
-  externalLabels:
-    cluster: "clustername"
   thanos:
-    baseImage: artifactory.ssnc.dev/quay.io/thanos/thanos
+    baseImage: quay.io/thanos/thanos
     version: v0.31.0
     logLevel: debug
-    objectStorageConfig:
-      key: store-s3-secret.yaml
-      name: storage-config
-    volumeMounts:
-      - name: ca-bundle
-        mountPath: /opt/bd
   resources:
     limits:
       cpu: 2000m
@@ -90,25 +62,8 @@ spec:
       resources:
         limits:
           cpu: 50m
-  volumeMounts:
-    - mountPath: /opt/bd
-      name: ca-bundle
-  volumes:
-    - name: ca-bundle
-      configMap:
-        name: ca-bundle
   version: v2.46.0
   serviceAccountName: prometheus-k8s
-  serviceMonitorSelector:
-    matchLabels:
-      app: platform-monitors
-  ruleSelector:
-    matchLabels:
-      prometheus: federated
-      role: alert-rules
-  configMaps:
-  - serving-certs-ca-bundle
-  - ca-bundle
 ---
 apiVersion: v1
 kind: Service
