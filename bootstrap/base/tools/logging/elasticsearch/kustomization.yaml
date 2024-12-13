@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: logging
+
+# Elasticsearch is a search/analytics engine used by Graylog to search through logs
+
+resources:
+  - statefulset.yaml
+  - service.yaml
+  - namespace.yaml

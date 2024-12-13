@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: logging
+
+# Graylog is a logging solution that uses Elasticsearch for log storage and MongoDB for config storage.
+# If running locally, run "kubectl port-forward service/graylog-service 9003:9000" to access the UI locally (127.0.0.1/9003)
+# The username will be "admin" and the password will be "graylogserveradmin"
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml

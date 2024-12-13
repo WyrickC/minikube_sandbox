@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graylog
+  namespace: logging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: graylog
+  template:
+    metadata:
+      labels:
+        app: graylog
+    spec:
+      containers:
+        - name: graylog
+          image: artifactory-ykt.ssnc-corp.cloud/docker-remote/graylog/graylog:5.1.7
+          ports:
+            - containerPort: 9000
+          env:
+            - name: GRAYLOG_PASSWORD_SECRET
+              value: graylogserveradmin
+            - name: GRAYLOG_ROOT_PASSWORD_SHA2
+              value: 916bd15dfeb7f313b50fdea6dc7f4788999495ee31eae0d28d617ddd934bd0f5
+            - name: GRAYLOG_ROOT_USERNAME
+              value: admin
+            - name: GRAYLOG_MONGODB_URI
+              value: mongodb://mongoadmin:mongoadmin@mongodb-service.mongo.svc.cluster.local:27017/graylog
+            - name: GRAYLOG_ELASTICSEARCH_HOSTS
+              value: http://elasticsearch-service.logging.svc.cluster.local:9200
+          volumeMounts:
+            - name: graylog-config
+              mountPath: /etc/graylog/server
+      volumes:
+        - name: graylog-config
+          configMap:
+            name: graylog-config

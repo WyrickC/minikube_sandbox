@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: logging
+spec:
+  serviceName: "elasticsearch-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      initContainers:
+      - name: init-sysctl
+        image: busybox
+        command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        securityContext:
+          privileged: true
+      containers:
+      - name: elasticsearch
+        image: elasticsearch:7.9.3
+        env:
+          - name: cluster.name
+            value: "sandbox"
+          - name: node.name
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: discovery.seed_hosts
+            value: "elasticsearch-0.elasticsearch-service"
+          - name: cluster.initial_master_nodes
+            value: "elasticsearch-0"
+          - name: ES_JAVA_OPTS
+            value: "-Xms512m -Xmx512m"
+          - name: xpack.security.enabled
+            value: "false"
+          - name: xpack.security.transport.ssl.enabled
+            value: "false"
+        ports:
+        - containerPort: 9200
+          name: es-http
+        - containerPort: 9300
+          name: es-transport
