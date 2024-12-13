@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: vault
+
+# Run "kubectl exec vault-0 vault operator init" to start vault and unseal keys
+# Take note of at least 3 keys and the root token for the next steps.
+# Then run: "kubectl exec -it vault-0 -- vault operator unseal <key>" for each key
+# Finally, if running locally, run "kubectl port-forward service/vault 8202:8200" to access the UI locally (127.0.0.1/8202)
+
+resources:
+  - vault.yaml
