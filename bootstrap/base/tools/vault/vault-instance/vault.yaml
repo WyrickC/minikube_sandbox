@@ -133,7 +133,6 @@ metadata:
     app.kubernetes.io/name: vault-agent-injector
     app.kubernetes.io/instance: vault
     app.kubernetes.io/managed-by: Helm
-  
 spec:
   ports:
   - name: https
@@ -158,7 +157,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     vault-internal: "true"
   annotations:
-
 spec:
   clusterIP: None
   publishNotReadyAddresses: true
@@ -187,7 +185,6 @@ metadata:
     app.kubernetes.io/instance: vault
     app.kubernetes.io/managed-by: Helm
   annotations:
-
 spec:
   # We want the servers to become available even if they're not ready
   # since this DNS is also used for join operations.
@@ -223,7 +220,6 @@ spec:
       app.kubernetes.io/name: vault-agent-injector
       app.kubernetes.io/instance: vault
       component: webhook
-  
   template:
     metadata:
       labels:
@@ -231,7 +227,6 @@ spec:
         app.kubernetes.io/instance: vault
         component: webhook
     spec:
-      
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -241,12 +236,7 @@ spec:
                   app.kubernetes.io/instance: "vault"
                   component: webhook
               topologyKey: kubernetes.io/hostname
-  
-      
-      
-      
       serviceAccountName: "vault-agent-injector"
-      
       securityContext:
         runAsNonRoot: true
         runAsGroup: 1000
@@ -255,7 +245,6 @@ spec:
       hostNetwork: false
       containers:
         - name: sidecar-injector
-          
           image: "hashicorp/vault-k8s:1.4.1"
           imagePullPolicy: "IfNotPresent"
           securityContext:
@@ -294,7 +283,6 @@ spec:
               value: "map"
             - name: AGENT_INJECT_TEMPLATE_CONFIG_EXIT_ON_RETRY_FAILURE
               value: "true"
-            
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -364,7 +352,6 @@ spec:
         component: server
       annotations:
     spec:
-      
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -374,13 +361,8 @@ spec:
                   app.kubernetes.io/instance: "vault"
                   component: server
               topologyKey: kubernetes.io/hostname
-  
-      
-      
-      
       terminationGracePeriodSeconds: 10
       serviceAccountName: vault
-      
       securityContext:
         runAsNonRoot: true
         runAsGroup: 1000
@@ -388,16 +370,13 @@ spec:
         fsGroup: 1000
       hostNetwork: false
       volumes:
-        
         - name: config
           configMap:
             name: vault-config
-  
         - name: home
           emptyDir: {}
       containers:
         - name: vault
-          
           image: hashicorp/vault:1.16.1
           imagePullPolicy: IfNotPresent
           command:
@@ -413,7 +392,6 @@ spec:
             [ -n "${TRANSIT_ADDR}" ] && sed -Ei "s|TRANSIT_ADDR|${TRANSIT_ADDR?}|g" /tmp/storageconfig.hcl;
             [ -n "${RAFT_ADDR}" ] && sed -Ei "s|RAFT_ADDR|${RAFT_ADDR?}|g" /tmp/storageconfig.hcl;
             /usr/local/bin/docker-entrypoint.sh vault server -config=/tmp/storageconfig.hcl 
-   
           securityContext:
             allowPrivilegeEscalation: false
           env:
@@ -449,21 +427,11 @@ spec:
               value: "https://$(HOSTNAME).vault-internal:8201"
             - name: HOME
               value: "/home/vault"
-            
-            
-            
           volumeMounts:
-          
-  
-    
             - name: data
               mountPath: /vault/data
-    
-  
-  
             - name: config
               mountPath: /vault/config
-  
             - name: home
               mountPath: /home/vault
           ports:
@@ -500,13 +468,9 @@ spec:
                   # to this pod while it's terminating
                   "sleep 5 && kill -SIGTERM $(pidof vault)",
                 ]
-      
-  
   volumeClaimTemplates:
     - metadata:
         name: data
-      
-      
       spec:
         accessModes:
           - ReadWriteOnce
