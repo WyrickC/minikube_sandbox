@@ -3,6 +3,9 @@ kind: Kustomization
 generatorOptions:
   disableNameSuffixHash: true
 
+# To apply, run "kustomize build kubeshark --enable-helm | kubectl apply -f -"
+# To access locally, run "kubectl port-forward service/kubeshark-front 8443:80"
+
 helmCharts:
   - name: kubeshark
     repo: https://helm.kubeshark.co
