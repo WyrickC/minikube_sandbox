@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: graylog-config
+  namespace: logging
+data:
+  server.conf: |
+    is_master = true
+    password_secret = graylogserveradmin
+    root_username = admin
+    root_password_sha2 = graylogserveradmin
+    mongodb_uri = mongodb://mongoadmin:mongoadmin@mongodb-service.mongo.svc.cluster.local:27017/graylog
+    elasticsearch_hosts = http://elasticsearch-service.logging.svc.cluster.local:9200
+
+
+    # Add other Graylog configurations as needed
