@@ -37,5 +37,3 @@ spec:
               memory: 1Gi
           securityContext: 
             runAsUser: 0
-          ports:
-            - containerPort: 10902 # GRPC server for StoreAPI.

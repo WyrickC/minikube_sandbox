@@ -1,9 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Deploy a basic observability stack
+# Deploy networking components and solutions
 # Add more as needed :) 
 
 resources:
-  - namespace.yaml
-  - cluster-prometheus
+  - nginx
