@@ -7,7 +7,17 @@ commonLabels:
 namespace: mon
 
 resources:
+  - grafana.yaml
+  - grafana-service-monitor.yaml
   - main-thanos-querier.yaml
 
 generatorOptions:
   disableNameSuffixHash: true
+
+secretGenerator:
+  - name: grafana-datasources
+    files:
+    - configs/prometheus.yaml
+  - name: grafana-config
+    files:
+    - configs/grafana.ini
