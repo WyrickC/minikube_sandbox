@@ -35,7 +35,7 @@ To get started with the sandbox, follow these steps:
     ```
 4. **Apply the Kubernetes Configurations**:
     ```bash
-    kubectl apply -f k8s/
+    kubectl apply -f base
     ```
 
 Once you have everything up and running, you can access the services and start experimenting with the setup!
