@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: safari-logger
+  name: safari-logger
+spec:
+  # nodeName: minikube
+  volumes:
+  - name: log-vol
+    hostPath:
+      path: /var/log/safari/
+  containers:
+  - image: busybox:1.31.1
+    name: safari-logger-busybox
+    command: ["sh", "-c", "while true; do date >> /var/log/safari/date.log; sleep 1; done"]
+    resources: {}
+    volumeMounts:
+    - name: log-vol
+      mountPath: /var/log/safari/
+  - image: busybox:1.31.1          
+    name: safari-date-logger-busybox
+    command: ["sh", "-c", "tail -f /var/log/safari/date.log"]       
+    volumeMounts:                             
+    - name: log-vol                                              
+      mountPath: /var/log/safari/
