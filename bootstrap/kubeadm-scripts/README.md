@@ -1,0 +1,1 @@
+# Run common.sh, and before running master.sh be sure to check your local interface name
