@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: observability-analyzer
+  namespace: mon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: observability-analyzer
+  template:
+    metadata:
+      labels:
+        app: observability-analyzer
+    spec:
+      containers:
+      - name: observability-analyzer
+        image: observability-analyzer
+        imagePullPolicy: Never  # This tells K8s to use the local image
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: Observability__ThanosQueryEndpoint
+          value: "http://thanos-querier:9090"  # Using the K8s service name
+        - name: Postgres__ConnectionString
+          value: "Host=postgres-service;Database=mydb;Username=myuser;Password=mypassword;Include Error Detail=true" # Using the K8s service name

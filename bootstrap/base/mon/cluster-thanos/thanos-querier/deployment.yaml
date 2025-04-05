@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thanos-querier
+  namespace: mon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thanos-querier
+  template:
+    metadata:
+      labels:
+        app: thanos-querier
+    spec:
+      containers:
+        - name: thanos-querier
+          image: quay.io/thanos/thanos:v0.34.1
+          args:
+            - "query"
+            - "--http-address=0.0.0.0:9090"
+            - "--log.level=debug"
+            # You can add "--store=<store-endpoint>" later
+          ports:
+            - containerPort: 9090
