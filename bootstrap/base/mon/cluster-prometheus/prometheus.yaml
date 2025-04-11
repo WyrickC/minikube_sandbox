@@ -21,11 +21,17 @@ spec:
           image: quay.io/prometheus/prometheus:v2.47.1
           args:
             - '--storage.tsdb.retention.time=2h'
-            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--config.file=/etc/prometheus/scrape-config.yml'
             - '--storage.tsdb.path=/prometheus'
             - '--storage.tsdb.min-block-duration=5m'
             - '--storage.tsdb.max-block-duration=30m'
             - '--web.enable-admin-api'
+          volumeMounts:
+            - name: scrape-config
+              mountPath: /etc/prometheus
+              readOnly: true
+            - name: prometheus-data
+              mountPath: /prometheus
           ports:
             - containerPort: 9090
           resources:
@@ -37,3 +43,30 @@ spec:
               memory: 1Gi
           securityContext: 
             runAsUser: 0
+        - name: thanos-sidecar
+          image: quay.io/thanos/thanos:v0.34.1
+          args:
+            - "sidecar"
+            - "--tsdb.path=/prometheus"
+            - "--prometheus.url=http://localhost:9090"  # Corrected port here
+            - "--grpc-address=0.0.0.0:10901"
+            - "--http-address=0.0.0.0:10902"
+          ports:
+            - containerPort: 10901
+            - containerPort: 10902
+          volumeMounts:
+            - name: prometheus-data
+              mountPath: /prometheus
+          resources:
+            requests:
+              cpu: 200m
+              memory: 200Mi
+            limits:
+              cpu: 500m
+              memory: 500Mi
+      volumes:
+        - name: scrape-config
+          secret:
+            secretName: scrape-config
+        - name: prometheus-data
+          emptyDir: {}
