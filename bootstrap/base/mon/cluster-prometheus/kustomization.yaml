@@ -3,9 +3,17 @@ kind: Kustomization
 
 namespace: mon
 
-# If running locally, run "kubectl port-forward service/prometheus-service 9091:8080" to access the UI locally (127.0.0.1/8202)
+# If running locally, run "kubectl port-forward service/prometheus-service 9092:8080" to access the UI locally (127.0.0.1/8202)
 
 resources:
   - prometheus.yaml
   - service.yaml
   - serviceaccount.yaml
+
+secretGenerator:
+  - name: scrape-config
+    files:
+      - configs/scrape-config.yml
+
+generatorOptions:
+  disableNameSuffixHash: true

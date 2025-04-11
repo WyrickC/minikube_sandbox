@@ -12,5 +12,9 @@ spec:
   type: NodePort  
   ports:
     - port: 8080
+      name: prometheus
       targetPort: 9090 
-      nodePort: 30090
+      nodePort: 30091
+    - port: 10901
+      name: thanos-sidecar-grpc
+      targetPort: 10901 

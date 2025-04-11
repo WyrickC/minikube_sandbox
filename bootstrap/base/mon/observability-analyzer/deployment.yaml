@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: observability-analyzer
-        image: observability-analyzer
+        image: observability-analyzer:latest
         imagePullPolicy: Never  # This tells K8s to use the local image
         env:
         - name: ASPNETCORE_ENVIRONMENT
