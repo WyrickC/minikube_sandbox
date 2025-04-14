@@ -99,10 +99,6 @@ Once you have deployed the components, here are some ways you can use them:
    - Initialize and unseal Vault.
    - Add secrets to Vault and configure access policies.
 
-## Contributing
-
-We welcome contributions! If you'd like to help improve this project, feel free to open an issue or create a pull request. Please make sure your code passes tests and adheres to the repository's style guidelines.
-
 ## License
 
 This repository is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
