@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-init-scripts
+  namespace: mongo
+data:
+  setup.sh: |-
+    #!/bin/sh
+    mongosh <<'EOF'
+    use admin
+
+    db.createUser({
+      user: "adminUser",
+      pwd: "adminPassword",
+      roles: ["root"]
+    })
+
+    db.auth("adminUser", "adminPassword")
+    db.createCollection("graylog")
+    db.createCollection("graylog-data")
+
+    use graylog
+    db.createUser({
+      user: "mongoadmin",
+      pwd: "mongoadmin",
+      roles: ["readWrite", "dbAdmin"]
+    })
+
+    db.auth("mongoadmin", "mongoadmin")
+    EOF
