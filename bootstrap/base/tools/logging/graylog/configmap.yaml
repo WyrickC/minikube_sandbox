@@ -4,13 +4,66 @@ metadata:
   name: graylog-config
   namespace: logging
 data:
+  # Graylog configuration file. Replace placeholders as needed.
   server.conf: |
-    is_master = true
-    password_secret = graylogserveradmin
+    # Core settings
+    # Do not put production secrets directly here; use Kubernetes Secrets where possible
+
+    # Data directory (required)
+    data_dir = /usr/share/graylog/data
+
+    # HTTP interface
+    http_bind_address = 0.0.0.0:9000
+    # If running behind a load balancer or ingress, set the publish URI (including protocol and port):
+    # http_publish_uri = http://graylog.example.com:9000/
+
+    # Node identity and master/worker behavior
+    # You can control master vs worker via environment variable GRAYLOG_IS_MASTER set on each StatefulSet pod.
+    # If you prefer to hardcode here, set `is_master = true` on the master config and false on workers.
+    # is_master = true
+
+    # Passwords / secrets (do NOT commit production secrets to this repo)
+    # Replace with the value from your Secret or mount a file with the secret into this path.
+    password_secret = CHANGE_ME_PASSWORD_SECRET
     root_username = admin
-    root_password_sha2 = graylogserveradmin
+    root_password_sha2 = CHANGE_ME_ROOT_PASSWORD_SHA2
+    root_email = admin@example.com
+
+    # MongoDB - Graylog uses MongoDB for metadata
     mongodb_uri = mongodb://mongoadmin:mongoadmin@mongodb-service.mongo.svc.cluster.local:27017/graylog
+
+    # Elasticsearch - Graylog uses Elasticsearch/OpenSearch for storage
     elasticsearch_hosts = http://elasticsearch-service.logging.svc.cluster.local:9200
+    # tuning
+    elasticsearch_max_total_connections = 100
+    elasticsearch_max_retries = 3
 
+    # JVM / performance tuning: Graylog reads these from environment in many deployments
+    # JVM_HEAP is typically set through the ES_JAVA_OPTS equivalent for Graylog if required.
 
-    # Add other Graylog configurations as needed
+    # Message journal (local disk) - required for buffering spikes
+    journal_dir = /usr/share/graylog/data/journal
+    # journal_max_size = 10737418240
+
+    # Node ID file (persisted) - ensure this file is on persistent storage so node identity survives restarts
+    node_id_file = /usr/share/graylog/data/node-id
+
+    # Logging
+    # log4j.configurationFile = /usr/share/graylog/data/config/log4j2.xml
+
+    # Other recommended production settings (tweak as needed):
+    # processbuffer_processors = 2
+    # outputbuffer_processors = 1
+    # ring_size = 65536
+
+    # Plugin and feature toggles
+    # plugin_dir = /usr/share/graylog/plugin
+
+    # Security
+    # Enable/disable CORS, TLS, OAuth etc. Configure via additional config fields or environment variables.
+
+    # Notes:
+    # - For production, avoid storing secrets in this ConfigMap. Instead mount Kubernetes Secrets or use External Secret managers.
+    # - To run migrations safely, start a single master/leader instance first, or run migrations as a Job before scaling.
+    # - If you need different configs for master vs worker, create `graylog-config-master` and `graylog-config-worker` ConfigMaps
+    #   and mount the appropriate one into each StatefulSet.

@@ -8,6 +8,7 @@ namespace: logging
 # The username will be "admin" and the password will be "graylogserveradmin"
 
 resources:
-  - deployment.yaml
+  - statefulset.yaml
   - service.yaml
   - configmap.yaml
+  - secret.yaml
