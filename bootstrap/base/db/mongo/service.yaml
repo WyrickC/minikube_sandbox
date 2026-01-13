@@ -11,3 +11,17 @@ spec:
       port: 27017
       targetPort: 27017
   type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-headless
+  namespace: mongo
+spec:
+  selector:
+    app: mongodb
+  clusterIP: None
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017

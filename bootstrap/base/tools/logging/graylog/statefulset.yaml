@@ -1,0 +1,201 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: graylog-master
+  namespace: logging
+spec:
+  serviceName: graylog-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: graylog
+      role: master
+  template:
+    metadata:
+      labels:
+        app: graylog
+        role: master
+    spec:
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: graylog
+          image: graylog/graylog:7.0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+          env:
+            - name: GRAYLOG_IS_MASTER
+              value: "true"
+            - name: GRAYLOG_PASSWORD_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: graylog-secret
+                  key: password_secret
+            - name: GRAYLOG_ROOT_PASSWORD_SHA2
+              valueFrom:
+                secretKeyRef:
+                  name: graylog-secret
+                  key: root_password_sha2
+            - name: GRAYLOG_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: graylog-secret
+                  key: root_username
+            - name: GRAYLOG_MONGODB_URI
+              value: mongodb://mongoadmin:mongoadmin@mongodb-service.mongo.svc.cluster.local:27017/graylog
+            - name: GRAYLOG_ELASTICSEARCH_HOSTS
+              value: http://elasticsearch-service.logging.svc.cluster.local:9200
+          readinessProbe:
+            httpGet:
+              path: /api/system/lbstatus
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /api/system/lbstatus
+              port: 9000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          volumeMounts:
+            - name: graylog-config
+              mountPath: /etc/graylog/server
+            - name: graylog-data
+              mountPath: /usr/share/graylog/data
+            - name: graylog-config-data
+              mountPath: /usr/share/graylog/data/config
+              readOnly: true
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 30"]
+      volumes:
+        - name: graylog-config
+          configMap:
+            name: graylog-config
+        - name: graylog-config-data
+          configMap:
+            name: graylog-config
+            items:
+              - key: server.conf
+                path: graylog.conf
+            defaultMode: 0644
+  volumeClaimTemplates:
+    - metadata:
+        name: graylog-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: graylog-worker
+  namespace: logging
+spec:
+  serviceName: graylog-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: graylog
+      role: worker
+  template:
+    metadata:
+      labels:
+        app: graylog
+        role: worker
+    spec:
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: graylog
+          image: graylog/graylog:7.0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+          env:
+            - name: GRAYLOG_IS_MASTER
+              value: "false"
+            - name: GRAYLOG_PASSWORD_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: graylog-secret
+                  key: password_secret
+            - name: GRAYLOG_ROOT_PASSWORD_SHA2
+              valueFrom:
+                secretKeyRef:
+                  name: graylog-secret
+                  key: root_password_sha2
+            - name: GRAYLOG_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: graylog-secret
+                  key: root_username
+            - name: GRAYLOG_MONGODB_URI
+              value: mongodb://mongoadmin:mongoadmin@mongodb-service.mongo.svc.cluster.local:27017/graylog
+            - name: GRAYLOG_ELASTICSEARCH_HOSTS
+              value: http://elasticsearch-service.logging.svc.cluster.local:9200
+          readinessProbe:
+            httpGet:
+              path: /api/system/lbstatus
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /api/system/lbstatus
+              port: 9000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          volumeMounts:
+            - name: graylog-config
+              mountPath: /etc/graylog/server
+            - name: graylog-data
+              mountPath: /usr/share/graylog/data
+            - name: graylog-config-data
+              mountPath: /usr/share/graylog/data/config
+              readOnly: true
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 30"]
+      volumes:
+        - name: graylog-config
+          configMap:
+            name: graylog-config
+        - name: graylog-config-data
+          configMap:
+            name: graylog-config
+            items:
+              - key: server.conf
+                path: graylog.conf
+            defaultMode: 0644
+  volumeClaimTemplates:
+    - metadata:
+        name: graylog-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 10Gi

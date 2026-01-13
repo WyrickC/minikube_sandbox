@@ -26,6 +26,7 @@ spec:
       containers:
       - name: elasticsearch
         image: elasticsearch:7.9.3
+        imagePullPolicy: IfNotPresent
         env:
           - name: cluster.name
             value: "sandbox"
@@ -48,3 +49,33 @@ spec:
           name: es-http
         - containerPort: 9300
           name: es-transport
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: es-http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: es-http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 5
+        startupProbe:
+          httpGet:
+            path: /_cluster/health
+            port: es-http
+          failureThreshold: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
