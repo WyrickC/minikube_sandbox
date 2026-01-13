@@ -20,6 +20,6 @@ spec:
             - "query"
             - "--http-address=0.0.0.0:9090"
             - "--log.level=debug"
-            # You can add "--store=<store-endpoint>" later
+            - "--store=prometheus-service:10901"
           ports:
             - containerPort: 9090
