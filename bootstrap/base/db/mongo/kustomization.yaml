@@ -8,7 +8,7 @@ namespace: mongo
 # Use the setup.sh script to assist
 
 resources:
-  - deployment.yaml
+  - statefulset.yaml
   - namespace.yaml
   - secret.yaml
   - service.yaml
